@@ -33,6 +33,10 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         const product = await Product.findById(item.product._id || item.product);
         if (!product || !product.isActive) continue;
 
+        if (product.stock < item.quantity) {
+          return sendError(res, `Insufficient stock for product ${product.name}. Available: ${product.stock}`, 400);
+        }
+
         const itemSubtotal = product.price * item.quantity;
         subtotal += itemSubtotal;
 
@@ -47,8 +51,22 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
           unit: product.unit,
         });
 
+        const prevStock = product.stock;
         product.stock = Math.max(0, product.stock - item.quantity);
         await product.save();
+
+        await InventoryMovement.create({
+          product: product._id,
+          type: 'SALE',
+          quantity: item.quantity,
+          previousStock: prevStock,
+          newStock: product.stock,
+          reason: 'Order Placement',
+        });
+      }
+
+      if (orderItems.length === 0) {
+        return sendError(res, 'No valid items found in cart', 400);
       }
 
       const tax = Math.round(subtotal * 0.18);
@@ -74,6 +92,15 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
       cart.items = [];
       await cart.save();
+
+      await Notification.create({
+        user: req.user.id,
+        title: 'Order Placed Successfully',
+        message: `Your order #${order.orderNumber} for ₹${totalAmount.toLocaleString('en-IN')} has been placed successfully.`,
+        type: 'ORDER_STATUS',
+        isRead: false,
+        link: `/dashboard/orders/${order._id}`,
+      });
 
       return sendSuccess(res, order, 'Order created successfully', 201);
     } else {
@@ -161,10 +188,21 @@ export const getOrderById = async (req: AuthRequest, res: Response) => {
     if (isMongoConnected()) {
       const order = await Order.findById(id).populate('items.product');
       if (!order) return sendError(res, 'Order not found', 404);
+
+      if (order.user.toString() !== req.user.id && req.user.role !== 'ADMIN') {
+        return sendError(res, 'Access denied', 403);
+      }
+
       return sendSuccess(res, order);
     } else {
       const order = inMemoryStore.orders.find((o) => o._id === id);
       if (!order) return sendError(res, 'Order not found', 404);
+
+      const orderUserId = typeof order.user === 'object' ? order.user._id : order.user;
+      if (orderUserId !== req.user.id && req.user.role !== 'ADMIN') {
+        return sendError(res, 'Access denied', 403);
+      }
+
       return sendSuccess(res, order);
     }
   } catch (error: any) {
@@ -181,14 +219,51 @@ export const cancelOrder = async (req: AuthRequest, res: Response) => {
       const order = await Order.findById(id);
       if (!order) return sendError(res, 'Order not found', 404);
 
+      if (order.user.toString() !== req.user.id && req.user.role !== 'ADMIN') {
+        return sendError(res, 'Access denied', 403);
+      }
+
+      if (order.status === 'Cancelled') {
+        return sendError(res, 'Order is already cancelled', 400);
+      }
+      if (order.status === 'Delivered' || order.status === 'Shipped') {
+        return sendError(res, 'Cannot cancel an order that is already shipped or delivered', 400);
+      }
+
       order.status = 'Cancelled';
+      order.statusHistory.push({ status: 'Cancelled', timestamp: new Date(), note: 'Cancelled by user' });
       await order.save();
-      return sendSuccess(res, order, 'Order cancelled');
+
+      for (const item of order.items) {
+        const prod = await Product.findById(item.product);
+        if (prod) {
+          const prev = prod.stock;
+          prod.stock += item.quantity;
+          await prod.save();
+
+          await InventoryMovement.create({
+            product: prod._id,
+            type: 'RESTOCK',
+            quantity: item.quantity,
+            previousStock: prev,
+            newStock: prod.stock,
+            reason: `Order #${order.orderNumber} Cancelled`,
+          });
+        }
+      }
+
+      return sendSuccess(res, order, 'Order cancelled and stock restored');
     } else {
       const order = inMemoryStore.orders.find((o) => o._id === id);
       if (!order) return sendError(res, 'Order not found', 404);
 
+      const orderUserId = typeof order.user === 'object' ? order.user._id : order.user;
+      if (orderUserId !== req.user.id && req.user.role !== 'ADMIN') {
+        return sendError(res, 'Access denied', 403);
+      }
+
       order.status = 'Cancelled';
+      order.statusHistory.push({ status: 'Cancelled', timestamp: new Date(), note: 'Cancelled by user' });
       return sendSuccess(res, order, 'Order cancelled');
     }
   } catch (error: any) {

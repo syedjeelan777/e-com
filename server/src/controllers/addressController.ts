@@ -45,7 +45,24 @@ export const createAddress = async (req: AuthRequest, res: Response) => {
 };
 
 export const updateAddress = async (req: AuthRequest, res: Response) => {
-  return sendSuccess(res, null, 'Address updated');
+  try {
+    if (!req.user) return sendError(res, 'Not authenticated', 401);
+    const { id } = req.params;
+    const data = req.body;
+
+    if (isMongoConnected()) {
+      const address = await Address.findOneAndUpdate({ _id: id, user: req.user.id }, data, { new: true });
+      if (!address) return sendError(res, 'Address not found or unauthorized', 404);
+      return sendSuccess(res, address, 'Address updated');
+    } else {
+      const address = inMemoryStore.addresses.find((a) => a._id === id && a.user === req.user?.id);
+      if (!address) return sendError(res, 'Address not found or unauthorized', 404);
+      Object.assign(address, data);
+      return sendSuccess(res, address, 'Address updated');
+    }
+  } catch (error: any) {
+    return sendError(res, error.message || 'Failed to update address', 500);
+  }
 };
 
 export const deleteAddress = async (req: AuthRequest, res: Response) => {
@@ -57,7 +74,7 @@ export const deleteAddress = async (req: AuthRequest, res: Response) => {
       await Address.findOneAndDelete({ _id: id, user: req.user.id });
       return sendSuccess(res, null, 'Address deleted');
     } else {
-      inMemoryStore.addresses = inMemoryStore.addresses.filter((a) => a._id !== id);
+      inMemoryStore.addresses = inMemoryStore.addresses.filter((a) => a._id === id && a.user === req.user?.id);
       return sendSuccess(res, null, 'Address deleted');
     }
   } catch (error: any) {

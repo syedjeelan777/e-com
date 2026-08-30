@@ -48,9 +48,49 @@ export const createReview = async (req: AuthRequest, res: Response) => {
 };
 
 export const updateReview = async (req: AuthRequest, res: Response) => {
-  return sendSuccess(res, null, 'Review updated');
+  try {
+    if (!req.user) return sendError(res, 'Not authenticated', 401);
+    const { id } = req.params;
+    const { rating, comment } = req.body;
+
+    if (isMongoConnected()) {
+      const review = await Review.findOneAndUpdate(
+        { _id: id, user: req.user.id },
+        { rating, comment },
+        { new: true }
+      );
+      if (!review) return sendError(res, 'Review not found or unauthorized', 404);
+      return sendSuccess(res, review, 'Review updated');
+    } else {
+      const review = inMemoryStore.reviews.find((r) => r._id === id);
+      if (!review) return sendError(res, 'Review not found or unauthorized', 404);
+      if (rating) review.rating = rating;
+      if (comment) review.comment = comment;
+      return sendSuccess(res, review, 'Review updated');
+    }
+  } catch (error: any) {
+    return sendError(res, error.message || 'Failed to update review', 500);
+  }
 };
 
 export const deleteReview = async (req: AuthRequest, res: Response) => {
-  return sendSuccess(res, null, 'Review deleted');
+  try {
+    if (!req.user) return sendError(res, 'Not authenticated', 401);
+    const { id } = req.params;
+
+    if (isMongoConnected()) {
+      const query: any = { _id: id };
+      if (req.user.role !== 'ADMIN') {
+        query.user = req.user.id;
+      }
+      const deleted = await Review.findOneAndDelete(query);
+      if (!deleted) return sendError(res, 'Review not found or unauthorized', 404);
+      return sendSuccess(res, null, 'Review deleted');
+    } else {
+      inMemoryStore.reviews = inMemoryStore.reviews.filter((r) => r._id !== id);
+      return sendSuccess(res, null, 'Review deleted');
+    }
+  } catch (error: any) {
+    return sendError(res, error.message || 'Failed to delete review', 500);
+  }
 };
