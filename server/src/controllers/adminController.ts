@@ -6,6 +6,8 @@ import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { AuthRequest } from '../types/index';
 import { isMongoConnected, inMemoryStore } from '../config/memoryStore';
 
+const allowedTransitions: Record<string, string[]> = { Pending: ['Confirmed', 'Cancelled'], Confirmed: ['Processing', 'Cancelled'], Processing: ['Shipped'], Shipped: ['Delivered'], Delivered: [], Cancelled: [] };
+
 export const getAdminOrders = async (req: Request, res: Response) => {
   try {
     const { status, search } = req.query;
@@ -50,6 +52,7 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
     if (isMongoConnected()) {
       const order = await Order.findById(id);
       if (!order) return sendError(res, 'Order not found', 404);
+      if (!allowedTransitions[order.status]?.includes(status)) return sendError(res, 'Invalid order status transition', 409);
 
       order.status = status;
       order.statusHistory.push({ status, note, timestamp: new Date() });
@@ -58,6 +61,7 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
     } else {
       const order = inMemoryStore.orders.find((o) => o._id === id);
       if (!order) return sendError(res, 'Order not found', 404);
+      if (!allowedTransitions[order.status]?.includes(status)) return sendError(res, 'Invalid order status transition', 409);
 
       order.status = status;
       order.statusHistory.push({ status, note, timestamp: new Date() });
