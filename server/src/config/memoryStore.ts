@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { hashPassword } from '../utils/password';
+import { NODE_ENV } from './env';
 
 export const isMongoConnected = (): boolean => {
   return mongoose.connection.readyState === 1;
@@ -24,10 +25,17 @@ let isSeeded = false;
 export const seedInMemoryStore = async () => {
   if (isSeeded) return;
 
-  console.log('🌱 Seeding In-Memory Data Store for Development Preview...');
-
-  const adminPassword = await hashPassword('Admin@12345');
-  const customerPassword = await hashPassword('Customer@12345');
+  if (NODE_ENV === 'production') throw new Error('In-memory data store is disabled in production');
+  const adminEmail = process.env.SEED_ADMIN_EMAIL;
+  const adminPlaintext = process.env.SEED_ADMIN_PASSWORD;
+  const customerEmail = process.env.SEED_CUSTOMER_EMAIL;
+  const customerPlaintext = process.env.SEED_CUSTOMER_PASSWORD;
+  if (!adminEmail || !adminPlaintext || !customerEmail || !customerPlaintext) {
+    isSeeded = true;
+    return;
+  }
+  const adminPassword = await hashPassword(adminPlaintext);
+  const customerPassword = await hashPassword(customerPlaintext);
 
   const adminId = '650000000000000000000001';
   const customerId = '650000000000000000000002';
@@ -42,7 +50,7 @@ export const seedInMemoryStore = async () => {
     {
       _id: adminId,
       name: 'Shaziya Admin',
-      email: 'admin@shaziyakart.local',
+      email: adminEmail,
       password: adminPassword,
       role: 'ADMIN',
       phone: '+91 9876543210',
@@ -54,7 +62,7 @@ export const seedInMemoryStore = async () => {
     {
       _id: customerId,
       name: 'Rajesh Sharma',
-      email: 'customer@shaziyakart.local',
+      email: customerEmail,
       password: customerPassword,
       role: 'USER',
       phone: '+91 9123456789',
@@ -202,7 +210,7 @@ export const seedInMemoryStore = async () => {
       user: {
         _id: customerId,
         name: 'Rajesh Sharma',
-        email: 'customer@shaziyakart.local',
+        email: customerEmail,
         company: 'Apex Electricals & Hardware',
       },
       items: [
@@ -224,7 +232,7 @@ export const seedInMemoryStore = async () => {
       discount: 0,
       totalAmount: 8142,
       paymentMethod: 'COD',
-      paymentStatus: 'PAID',
+      paymentStatus: 'PENDING',
       status: 'Delivered',
       statusHistory: [{ status: 'Delivered', timestamp: new Date() }],
       createdAt: new Date(),

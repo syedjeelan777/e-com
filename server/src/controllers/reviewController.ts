@@ -62,7 +62,7 @@ export const updateReview = async (req: AuthRequest, res: Response) => {
       if (!review) return sendError(res, 'Review not found or unauthorized', 404);
       return sendSuccess(res, review, 'Review updated');
     } else {
-      const review = inMemoryStore.reviews.find((r) => r._id === id);
+      const review = inMemoryStore.reviews.find((r) => r._id === id && (typeof r.user === 'object' ? r.user._id : r.user) === req.user?.id);
       if (!review) return sendError(res, 'Review not found or unauthorized', 404);
       if (rating) review.rating = rating;
       if (comment) review.comment = comment;
@@ -87,7 +87,9 @@ export const deleteReview = async (req: AuthRequest, res: Response) => {
       if (!deleted) return sendError(res, 'Review not found or unauthorized', 404);
       return sendSuccess(res, null, 'Review deleted');
     } else {
-      inMemoryStore.reviews = inMemoryStore.reviews.filter((r) => r._id !== id);
+      const review = inMemoryStore.reviews.find((r) => r._id === id && (req.user?.role === 'ADMIN' || (typeof r.user === 'object' ? r.user._id : r.user) === req.user?.id));
+      if (!review) return sendError(res, 'Review not found or unauthorized', 404);
+      inMemoryStore.reviews = inMemoryStore.reviews.filter((r) => r !== review);
       return sendSuccess(res, null, 'Review deleted');
     }
   } catch (error: any) {

@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Building2, ShieldCheck, LogIn, Key, UserCheck } from 'lucide-react';
+import { Building2, ShieldCheck, LogIn } from 'lucide-react';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { useAuth } from '../../context/AuthContext';
@@ -28,7 +28,6 @@ export const Login: React.FC = () => {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -55,11 +54,6 @@ export const Login: React.FC = () => {
     }
   };
 
-  const handleDemoLogin = (email: string, pass: string) => {
-    setValue('email', email);
-    setValue('password', pass);
-    handleSubmit(onSubmit)();
-  };
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center p-4">
@@ -75,29 +69,6 @@ export const Login: React.FC = () => {
           <p className="text-xs text-gray-500">
             Enterprise procurement, order tracking & tax invoices
           </p>
-        </div>
-
-        {/* Demo Account Switcher Buttons */}
-        <div className="bg-gray-50 dark:bg-industrial-950 p-3.5 rounded-2xl border border-gray-200 dark:border-industrial-800 space-y-2 text-xs">
-          <div className="flex items-center gap-1.5 font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-            <Key className="w-3.5 h-3.5 text-brand-500" /> One-Click Demo Accounts
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('admin@shaziyakart.local', 'Admin@12345')}
-              className="bg-brand-900/40 hover:bg-brand-900 text-brand-300 border border-brand-700 font-bold py-1.5 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
-            >
-              <UserCheck className="w-3.5 h-3.5" /> Demo Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('customer@shaziyakart.local', 'Customer@12345')}
-              className="bg-emerald-900/40 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 font-bold py-1.5 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
-            >
-              <UserCheck className="w-3.5 h-3.5" /> Demo Customer
-            </button>
-          </div>
         </div>
 
         {/* Login Form */}

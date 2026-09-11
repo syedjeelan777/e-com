@@ -1,22 +1,11 @@
 import { z } from 'zod';
 
+const optionalText = (max: number) => z.string().trim().max(max).optional();
 export const registerSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  phone: z.string().optional(),
-  company: z.string().optional(),
-  gstin: z.string().optional(),
-});
-
-export const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
-});
-
-export const updateProfileSchema = z.object({
-  name: z.string().min(2).optional(),
-  phone: z.string().optional(),
-  company: z.string().optional(),
-  gstin: z.string().optional(),
-});
+  name: z.string().trim().min(2).max(120),
+  email: z.string().trim().email().max(254),
+  password: z.string().min(12).max(128),
+  phone: optionalText(30), company: optionalText(160), gstin: optionalText(30),
+}).strict();
+export const loginSchema = z.object({ email: z.string().trim().email().max(254), password: z.string().min(1).max(128) }).strict();
+export const updateProfileSchema = z.object({ name: z.string().trim().min(2).max(120).optional(), phone: optionalText(30), company: optionalText(160), gstin: optionalText(30) }).strict();
