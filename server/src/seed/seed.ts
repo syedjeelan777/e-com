@@ -12,21 +12,21 @@ import { Wishlist } from '../models/Wishlist';
 import { InventoryMovement } from '../models/InventoryMovement';
 import { Notification } from '../models/Notification';
 import { hashPassword } from '../utils/password';
+import { NODE_ENV } from '../config/env';
 
 const seedDatabase = async () => {
+  if (NODE_ENV === 'production') throw new Error('Database seeding is disabled in production');
+  const adminEmail = process.env.SEED_ADMIN_EMAIL;
+  const adminPlaintext = process.env.SEED_ADMIN_PASSWORD;
+  const customerEmail = process.env.SEED_CUSTOMER_EMAIL;
+  const customerPlaintext = process.env.SEED_CUSTOMER_PASSWORD;
+  if (!adminEmail || !adminPlaintext || !customerEmail || !customerPlaintext) throw new Error('Seed credentials must be provided through SEED_* environment variables');
   console.log('🌱 Starting Database Seeding for SHAZIYAKART...');
   await connectDB();
 
   if (!isMongoConnected()) {
     console.log('\n✅ In-Memory Data Store Seeded Successfully for Development!');
     console.log('==================================================');
-    console.log('DEMO ACCOUNTS READY:');
-    console.log('Admin Email:    admin@shaziyakart.local');
-    console.log('Admin Password: Admin@12345');
-    console.log('--------------------------------------------------');
-    console.log('Customer Email: customer@shaziyakart.local');
-    console.log('Customer Pass:  Customer@12345');
-    console.log('==================================================\n');
     process.exit(0);
   }
 
@@ -48,12 +48,12 @@ const seedDatabase = async () => {
     console.log('🧹 Cleared existing development data.');
 
     // 1. Create Users
-    const adminPassword = await hashPassword('Admin@12345');
-    const customerPassword = await hashPassword('Customer@12345');
+    const adminPassword = await hashPassword(adminPlaintext);
+    const customerPassword = await hashPassword(customerPlaintext);
 
     const admin = await User.create({
       name: 'Shaziya Admin',
-      email: 'admin@shaziyakart.local',
+      email: adminEmail,
       password: adminPassword,
       role: 'ADMIN',
       phone: '+91 9876543210',
@@ -63,7 +63,7 @@ const seedDatabase = async () => {
 
     const customer = await User.create({
       name: 'Rajesh Sharma',
-      email: 'customer@shaziyakart.local',
+      email: customerEmail,
       password: customerPassword,
       role: 'USER',
       phone: '+91 9123456789',
@@ -449,7 +449,7 @@ const seedDatabase = async () => {
       discount: 0,
       totalAmount: Math.round((products[0].price * 2 + products[1].price * 3) * 1.18),
       paymentMethod: 'COD',
-      paymentStatus: 'PAID',
+      paymentStatus: 'PENDING',
       status: 'Delivered',
       statusHistory: [
         { status: 'Pending', timestamp: new Date(Date.now() - 7 * 86400000) },
@@ -491,7 +491,7 @@ const seedDatabase = async () => {
       discount: 0,
       totalAmount: Math.round(products[4].price * 1.18),
       paymentMethod: 'DEMO_CARD',
-      paymentStatus: 'PAID',
+      paymentStatus: 'PENDING',
       status: 'Processing',
       statusHistory: [
         { status: 'Pending', timestamp: new Date(Date.now() - 2 * 86400000) },
@@ -533,13 +533,6 @@ const seedDatabase = async () => {
 
     console.log('\n✅ Database Seeding Completed Successfully!');
     console.log('==================================================');
-    console.log('DEMO ACCOUNTS READY:');
-    console.log('Admin Email:    admin@shaziyakart.local');
-    console.log('Admin Password: Admin@12345');
-    console.log('--------------------------------------------------');
-    console.log('Customer Email: customer@shaziyakart.local');
-    console.log('Customer Pass:  Customer@12345');
-    console.log('==================================================\n');
 
   } catch (error) {
     console.error('❌ Seeding Error:', error);

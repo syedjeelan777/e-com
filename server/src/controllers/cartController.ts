@@ -94,7 +94,9 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
       if (!cart) cart = new Cart({ user: req.user.id, items: [] });
 
       const idx = cart.items.findIndex((i) => i.product.toString() === productId);
-      if (idx > -1) cart.items[idx].quantity += quantity;
+      const resultingQuantity = idx > -1 ? cart.items[idx].quantity + quantity : quantity;
+      if (resultingQuantity > product.stock || resultingQuantity > 1000) return sendError(res, 'Requested quantity exceeds available stock or limit', 409);
+      if (idx > -1) cart.items[idx].quantity = resultingQuantity;
       else cart.items.push({ product: product._id as any, quantity, priceAtAddition: product.price });
 
       await cart.save();
@@ -111,8 +113,10 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
       }
 
       const idx = cart.items.findIndex((i: any) => i.product === productId || i.product._id === productId);
+      const resultingQuantity = idx > -1 ? cart.items[idx].quantity + quantity : quantity;
+      if (resultingQuantity > product.stock || resultingQuantity > 1000) return sendError(res, 'Requested quantity exceeds available stock or limit', 409);
       if (idx > -1) {
-        cart.items[idx].quantity += quantity;
+        cart.items[idx].quantity = resultingQuantity;
       } else {
         cart.items.push({
           _id: `item_${Date.now()}`,
@@ -144,6 +148,8 @@ export const updateCartItem = async (req: AuthRequest, res: Response) => {
       const item = cart.items.find((i: any) => i._id.toString() === itemId);
       if (!item) return sendError(res, 'Item not found in cart', 404);
 
+      const product = await Product.findById(item.product);
+      if (!product || !product.isActive || quantity > product.stock || quantity > 1000) return sendError(res, 'Requested quantity exceeds available stock', 409);
       item.quantity = quantity;
       await cart.save();
       return getCart(req, res);
@@ -152,7 +158,9 @@ export const updateCartItem = async (req: AuthRequest, res: Response) => {
       if (!cart) return sendError(res, 'Cart not found', 404);
 
       const item = cart.items.find((i: any) => i._id === itemId);
-      if (item) item.quantity = quantity;
+      const product = item && inMemoryStore.products.find((p) => p._id === (typeof item.product === 'object' ? item.product._id : item.product));
+      if (!item || !product || quantity > product.stock || quantity > 1000) return sendError(res, 'Requested quantity exceeds available stock', 409);
+      item.quantity = quantity;
 
       return getCart(req, res);
     }

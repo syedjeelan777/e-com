@@ -21,6 +21,8 @@ import {
   getCategoryAnalytics,
 } from '../controllers/analyticsController';
 import { authenticate, requireRole } from '../middleware/authMiddleware';
+import { validateBody } from '../middleware/validator';
+import { updateOrderStatusSchema } from '../validators/orderValidator';
 
 const router = Router();
 
@@ -28,7 +30,7 @@ router.use(authenticate, requireRole('ADMIN'));
 
 router.get('/orders', getAdminOrders);
 router.get('/orders/:id', getAdminOrderById);
-router.patch('/orders/:id/status', updateOrderStatus);
+router.patch('/orders/:id/status', validateBody(updateOrderStatusSchema), updateOrderStatus);
 
 router.get('/inventory', getInventory);
 router.patch('/inventory/:productId', updateProductStock);

@@ -25,7 +25,8 @@ export const getProducts = async (req: Request, res: Response) => {
       const query: any = { isActive: true };
 
       if (search && typeof search === 'string' && search.trim() !== '') {
-        const searchRegex = new RegExp(search.trim(), 'i');
+        const escapedSearch = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const searchRegex = new RegExp(escapedSearch, 'i');
         query.$or = [
           { name: searchRegex },
           { description: searchRegex },
@@ -49,7 +50,8 @@ export const getProducts = async (req: Request, res: Response) => {
       }
 
       if (brand && typeof brand === 'string') {
-        query.brand = new RegExp(brand, 'i');
+        const escapedBrand = brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        query.brand = new RegExp(escapedBrand, 'i');
       }
 
       if (minPrice || maxPrice) {
@@ -227,7 +229,7 @@ export const updateProduct = async (req: AuthRequest, res: Response) => {
     const data = req.body;
 
     if (isMongoConnected()) {
-      const product = await Product.findByIdAndUpdate(id, data, { new: true }).populate('category', 'name slug');
+      const product = await Product.findByIdAndUpdate(id, { $set: data }, { new: true, runValidators: true, strict: true }).populate('category', 'name slug');
       if (!product) return sendError(res, 'Product not found', 404);
       return sendSuccess(res, product, 'Product updated successfully');
     } else {

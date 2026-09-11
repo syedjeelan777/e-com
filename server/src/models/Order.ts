@@ -45,6 +45,7 @@ export interface IOrder extends Document {
   status: 'Pending' | 'Confirmed' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
   statusHistory: IStatusHistory[];
   notes?: string;
+  idempotencyKey?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -111,9 +112,12 @@ const OrderSchema = new Schema<IOrder>(
       index: true,
     },
     statusHistory: [StatusHistorySchema],
-    notes: { type: String },
+    notes: { type: String, maxlength: 1000 },
+    idempotencyKey: { type: String, index: true, sparse: true },
   },
   { timestamps: true }
 );
+
+OrderSchema.index({ user: 1, idempotencyKey: 1 }, { unique: true, sparse: true });
 
 export const Order = mongoose.model<IOrder>('Order', OrderSchema);

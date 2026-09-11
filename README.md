@@ -19,18 +19,12 @@ Copy the provided environment template file to `.env`:
 ```bash
 cp .env.example .env
 ```
-*(Optionally adjust `PORT`, `JWT_SECRET`, or `MONGODB_URI` in `.env` if needed. If MongoDB is not running locally, the application automatically falls back to an in-memory data store).*
+Set a unique `JWT_SECRET` of at least 32 characters. In development, MongoDB may be unavailable and the app uses a non-persistent store; production requires `MONGODB_URI` and fails closed if it cannot connect.
 
-### 3. Seed Database & Demo Data
-Initialize the database with sample B2B products, categories, addresses, customer orders, reviews, and pre-configured accounts:
+### 3. Seed Development Data (optional)
+Seeding is disabled in production. For development, set `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_CUSTOMER_EMAIL`, and `SEED_CUSTOMER_PASSWORD` in `.env`, then run:
 ```bash
 npm run seed
-```
-
-### 4. Start Development Server
-Run both the Express backend API and Vite frontend dev server concurrently:
-```bash
-npm run dev
 ```
 
 - **Frontend Application**: [http://localhost:5173](http://localhost:5173)
@@ -39,14 +33,10 @@ npm run dev
 
 ---
 
-## 🔑 Pre-Seeded Demo Accounts
+## Development credentials
 
-Use these pre-configured credentials to sign in and test different user roles:
+No credentials are committed to this repository. Use the `SEED_*` environment variables described above for local development only.
 
-| Role | Email | Password | Access & Capabilities |
-| :--- | :--- | :--- | :--- |
-| **Admin** | `admin@shaziyakart.local` | `Admin@12345` | Full access to Admin Portal, Analytics, Inventory Movements, Catalog CRUD, Order Management, Customer Stats & Reviews |
-| **Customer** | `customer@shaziyakart.local` | `Customer@12345` | Access to B2B Catalog, Shopping Cart, Checkout, Order Tracking, Address Book, Wishlist & Profile |
 
 ---
 
@@ -56,7 +46,7 @@ Run these scripts from the repository root:
 
 - `npm install`: Installs dependencies for root, client, and server workspaces.
 - `npm run dev`: Concurrently starts backend API (`port 5000`) and frontend Vite dev server (`port 5173`).
-- `npm run seed`: Seeds the database or in-memory store with B2B categories, products, orders, and demo accounts.
+- `npm run seed`: Seeds development data using credentials supplied through environment variables; production seeding is rejected.
 - `npm run build`: Compiles TypeScript and builds production assets for both server (`server/dist`) and client (`client/dist`).
 - `npm run test`: Executes the complete test suite (Jest API tests + Vitest frontend integration tests).
 - `npm run lint`: Runs TypeScript `--noEmit` type-checking across both client and server codebases.
@@ -83,7 +73,7 @@ Run these scripts from the repository root:
 ### 💡 Tech Stack & Resilience
 - **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons, React Router v6, React Query, Recharts.
 - **Backend**: Node.js, Express, Mongoose, TypeScript, JWT, BcryptJS, Express Validator, Rate Limiter.
-- **Resilience**: Integrated automatic in-memory data store fallback so all endpoints, search filters, ordering, and seed scripts remain 100% operational even without a running MongoDB daemon.
+- **Resilience**: Development-only non-persistent fallback; production requires MongoDB and never silently falls back.
 - **Testing**: Jest, Supertest, Vitest, React Testing Library.
 
 ---

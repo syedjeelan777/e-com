@@ -4,7 +4,7 @@ import { registerSchema, loginSchema } from '../validators/authValidator';
 
 describe('Auth Utilities and Validators', () => {
   it('should hash and compare passwords correctly', async () => {
-    const plain = 'Admin@12345';
+    const plain = 'TestOnly-StrongPassword-2026!';
     const hashed = await hashPassword(plain);
 
     expect(hashed).not.toBe(plain);

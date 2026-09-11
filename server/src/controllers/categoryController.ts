@@ -58,7 +58,7 @@ export const updateCategory = async (req: Request, res: Response) => {
     const data = req.body;
 
     if (isMongoConnected()) {
-      const category = await Category.findByIdAndUpdate(id, data, { new: true });
+      const category = await Category.findByIdAndUpdate(id, { $set: data }, { new: true, runValidators: true, strict: true });
       if (!category) return sendError(res, 'Category not found', 404);
       return sendSuccess(res, category, 'Category updated');
     } else {

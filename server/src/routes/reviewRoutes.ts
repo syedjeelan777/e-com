@@ -1,17 +1,11 @@
 import { Router } from 'express';
-import {
-  getProductReviews,
-  createReview,
-  updateReview,
-  deleteReview,
-} from '../controllers/reviewController';
+import { getProductReviews, createReview, updateReview, deleteReview } from '../controllers/reviewController';
 import { authenticate } from '../middleware/authMiddleware';
-
+import { validateBody } from '../middleware/validator';
+import { createReviewSchema, updateReviewSchema } from '../validators/reviewValidator';
 const router = Router({ mergeParams: true });
-
 router.get('/products/:productId/reviews', getProductReviews);
-router.post('/products/:productId/reviews', authenticate, createReview);
-router.put('/reviews/:id', authenticate, updateReview);
+router.post('/products/:productId/reviews', authenticate, validateBody(createReviewSchema), createReview);
+router.put('/reviews/:id', authenticate, validateBody(updateReviewSchema), updateReview);
 router.delete('/reviews/:id', authenticate, deleteReview);
-
 export default router;
